@@ -1,1 +1,4 @@
+*.db
+*.db-journal
+.remember/
 node_modules/
