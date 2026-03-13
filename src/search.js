@@ -12,7 +12,8 @@ export function bm25Search(db, query, limit = 20) {
   `);
   try {
     return stmt.all(query, limit);
-  } catch {
+  } catch (e) {
+    if (process.env.DEBUG) console.warn(`[remember] bm25Search failed: ${e.message}`);
     return [];
   }
 }

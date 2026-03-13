@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 const args = process.argv.slice(2);
 const command = args[0];
-const dbPath = process.env.REMEMBER_DB || resolve(process.cwd(), '.remember.db');
+const dbPath = process.env.REMEMBER_DB_PATH || process.env.REMEMBER_DB || resolve(process.cwd(), '.remember.db');
 
 if (!command || command === '--help' || command === '-h') {
   console.log(`remember - cognitive memory for AI agents
@@ -20,8 +20,9 @@ Usage:
   remember import <filepath>
 
 Environment:
-  REMEMBER_DB  Path to SQLite database (default: ./.remember.db)
-  REMEMBER_EMBED  Embedding mode: none|openai|ollama|cerebras`);
+  REMEMBER_DB_PATH  Path to SQLite database (default: ./.remember.db)
+  REMEMBER_DB       Alias for REMEMBER_DB_PATH (deprecated)
+  REMEMBER_EMBED    Embedding mode: none|openai|ollama|cerebras`);
   process.exit(0);
 }
 
@@ -73,14 +74,9 @@ try {
       const dryRun = args.includes('--dry');
       const result = mem.autoConnectAll({ dryRun });
       if (dryRun) {
-        console.log(`[Dry run] Would create ${result.created} connections`);
-        if (result.preview) {
-          for (const p of result.preview) {
-            console.log(`  ${p.from.slice(0, 8)}.. → ${p.to.slice(0, 8)}.. (weight: ${p.weight})`);
-          }
-        }
+        console.log(`[Dry run] Would create ~${result.total} connections`);
       } else {
-        console.log(`Connections: ${result.created} created, ${result.updated} updated, ${result.pruned} pruned`);
+        console.log(`Connections: ${result.created} created`);
         console.log(`Total connections: ${result.total}`);
       }
       break;

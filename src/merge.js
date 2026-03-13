@@ -20,8 +20,9 @@ export function findDuplicates(db, content, threshold = 0.85) {
         candidates.push({ ...r, similarity: sim });
       }
     }
-  } catch {
-    // FTS match can fail on special chars
+  } catch (e) {
+    // FTS match can fail on special chars — not a hard error
+    if (process.env.DEBUG) console.warn(`[remember] findDuplicates FTS match failed: ${e.message}`);
   }
   return candidates;
 }
