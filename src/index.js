@@ -7,6 +7,7 @@ import { initCard, schedule, shouldDecay, retrievability } from './fsrs.js';
 import { hybridSearch } from './search.js';
 import { findDuplicates, mergeMemories, consolidate as consolidateAll } from './merge.js';
 import { createEmbedder } from './embed.js';
+import { connectNewMemory, autoConnect } from './connect.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -58,10 +59,13 @@ export default class Remember {
 
     const mem = await this._insert(content, { category, tags, source });
 
-    // Create connections
+    // Create explicit connections
     for (const conn of connections) {
       this.connect(mem.id, conn.id, conn.weight, conn.reason);
     }
+
+    // Auto-connect based on shared keywords
+    connectNewMemory(this.db, { id: mem.id, content, tags });
 
     return mem;
   }
@@ -151,6 +155,10 @@ export default class Remember {
     return updated;
   }
 
+  autoConnectAll(opts = {}) {
+    return autoConnect(this.db, opts);
+  }
+
   connect(fromId, toId, weight = 1.0, reason = null) {
     this.db.prepare(`
       INSERT OR REPLACE INTO connections (from_id, to_id, weight, reason)
@@ -177,7 +185,10 @@ export default class Remember {
     // Merge duplicates
     const mergeResult = consolidateAll(this.db);
 
-    return { decayed, ...mergeResult };
+    // Auto-connect all memories
+    const connectResult = autoConnect(this.db, { pruneThreshold: 0.1 });
+
+    return { decayed, ...mergeResult, connectionsCreated: connectResult.created };
   }
 
   stats() {

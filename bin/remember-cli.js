@@ -13,6 +13,7 @@ if (!command || command === '--help' || command === '-h') {
 Usage:
   remember store <content> [--category <cat>] [--tags <t1,t2>] [--source <src>]
   remember recall <query> [--limit <n>] [--category <cat>]
+  remember connect [--dry]
   remember stats
   remember consolidate
   remember export [--format json|markdown]
@@ -64,6 +65,23 @@ try {
           console.log(`[${r.category}] ${r.content.slice(0, 100)}`);
           console.log(`  id=${r.id} retrievability=${(r.retrievability * 100).toFixed(0)}%`);
         }
+      }
+      break;
+    }
+
+    case 'connect': {
+      const dryRun = args.includes('--dry');
+      const result = mem.autoConnectAll({ dryRun });
+      if (dryRun) {
+        console.log(`[Dry run] Would create ${result.created} connections`);
+        if (result.preview) {
+          for (const p of result.preview) {
+            console.log(`  ${p.from.slice(0, 8)}.. → ${p.to.slice(0, 8)}.. (weight: ${p.weight})`);
+          }
+        }
+      } else {
+        console.log(`Connections: ${result.created} created, ${result.updated} updated, ${result.pruned} pruned`);
+        console.log(`Total connections: ${result.total}`);
       }
       break;
     }

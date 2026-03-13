@@ -2,6 +2,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import Remember from '../src/index.js';
 import { initCard, schedule, retrievability, shouldDecay } from '../src/fsrs.js';
+import { extractKeywords } from '../src/connect.js';
 
 describe('FSRS', () => {
   it('should initialize a card', () => {
@@ -128,5 +129,80 @@ describe('Remember', () => {
     assert.ok(Array.isArray(s.byCategory));
     assert.ok(typeof s.connections === 'number');
     assert.ok(typeof s.avgStability === 'number');
+  });
+});
+
+describe('Auto-connect', () => {
+  it('should extract keywords correctly', () => {
+    const kw = extractKeywords('PM2 프로세스 모니터링 도구');
+    assert.ok(kw.has('pm2'));
+    assert.ok(kw.has('프로세스'));
+    assert.ok(kw.has('모니터링'));
+    assert.ok(kw.has('도구'));
+    // single char and stopwords excluded
+    assert.ok(!kw.has('는'));
+    assert.ok(!kw.has('the'));
+  });
+
+  it('should filter stopwords and short words', () => {
+    const kw = extractKeywords('the a is 이 가 을 를 hello world');
+    assert.ok(!kw.has('the'));
+    assert.ok(!kw.has('a'));
+    assert.ok(!kw.has('is'));
+    assert.ok(!kw.has('이'));
+    assert.ok(kw.has('hello'));
+    assert.ok(kw.has('world'));
+  });
+
+  it('should auto-connect memories with shared keywords on store', async () => {
+    const m = new Remember({ dbPath: ':memory:' });
+    await m.store('Conway Trader는 PM2로 운영된다', { tags: ['conway'] });
+    await m.store('PM2 프로세스 모니터링 도구', { tags: ['pm2'] });
+    await m.store('수원삼성 축구 관람 후기', { tags: ['축구'] });
+
+    const stats = m.stats();
+    assert.ok(stats.connections > 0, `expected connections > 0, got ${stats.connections}`);
+    m.close();
+  });
+
+  it('should auto-connect all with autoConnectAll', async () => {
+    const m = new Remember({ dbPath: ':memory:' });
+    await m.store('React virtual DOM rendering', { tags: ['react', 'frontend'] });
+    await m.store('Vue virtual DOM reactivity', { tags: ['vue', 'frontend'] });
+    await m.store('Angular change detection', { tags: ['angular', 'frontend'] });
+    await m.store('SQLite embedded database', { tags: ['database'] });
+
+    const result = m.autoConnectAll();
+    assert.ok(result.created >= 0);
+    assert.ok(typeof result.total === 'number');
+
+    // React and Vue share "virtual" and "dom" keywords → should be connected
+    const stats = m.stats();
+    assert.ok(stats.connections > 0, 'React/Vue should be connected via shared keywords');
+    m.close();
+  });
+
+  it('should support dry run mode', async () => {
+    const m = new Remember({ dbPath: ':memory:' });
+    await m.store('JavaScript async await patterns', { tags: ['js'] });
+    await m.store('JavaScript promise chaining', { tags: ['js'] });
+
+    const before = m.stats().connections;
+    const result = m.autoConnectAll({ dryRun: true });
+    const after = m.stats().connections;
+
+    assert.equal(before, after, 'dry run should not modify connections');
+    assert.ok(result.preview, 'dry run should include preview');
+    m.close();
+  });
+
+  it('should add connectionsCreated to consolidate result', async () => {
+    const m = new Remember({ dbPath: ':memory:' });
+    await m.store('TypeScript type system', { tags: ['typescript'] });
+    await m.store('TypeScript compiler options', { tags: ['typescript'] });
+
+    const result = m.consolidate();
+    assert.ok(typeof result.connectionsCreated === 'number');
+    m.close();
   });
 });

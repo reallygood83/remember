@@ -31,6 +31,7 @@ Usage:
   remember store <content> [--category <cat>] [--tags <t1,t2>] [--source <src>]
   remember recall <query> [--limit <n>] [--category <cat>]
   remember reinforce <id> [--rating <1-4>]
+  remember connect [--dry]
   remember stats
   remember consolidate
   remember export [--format json|markdown]
@@ -113,6 +114,13 @@ try {
         console.error(`Memory not found: ${id}`);
         process.exit(1);
       }
+      break;
+    }
+
+    case 'connect': {
+      const dryRun = args.includes('--dry');
+      const result = mem.autoConnectAll({ dryRun });
+      console.log(JSON.stringify({ connected: true, dryRun, ...result }));
       break;
     }
 
