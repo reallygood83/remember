@@ -49,7 +49,7 @@ export function connectNewMemory(db, { id, content, tags }) {
       try {
         const t = JSON.parse(mem.tags);
         if (Array.isArray(t)) t.forEach(x => targetKw.add(x.toLowerCase()));
-      } catch {}
+      } catch (e) { /* tags JSON parse failed for memory ${mem.id} */ }
     }
     let shared = 0;
     for (const k of sourceKw) { if (targetKw.has(k)) shared++; }
@@ -63,7 +63,9 @@ export function connectNewMemory(db, { id, content, tags }) {
   const sorted = [...candidates.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
   for (const [targetId, weight] of sorted) {
     if (weight < 0.05) continue;
-    try { upsert.run(id, targetId, Math.round(weight * 100) / 100); created++; } catch {}
+    try { upsert.run(id, targetId, Math.round(weight * 100) / 100); created++; } catch (e) {
+      if (process.env.DEBUG) console.warn(`[remember] connectNewMemory upsert failed: ${e.message}`);
+    }
   }
   return { created };
 }
@@ -90,7 +92,7 @@ export function autoConnect(db, opts = {}) {
       try {
         const t = JSON.parse(mem.tags);
         if (Array.isArray(t)) t.forEach(x => kw.add(x.toLowerCase()));
-      } catch {}
+      } catch (e) { /* tags JSON parse failed for memory ${mem.id} */ }
     }
     memKeywords.set(mem.id, kw);
     for (const k of kw) {
@@ -125,7 +127,9 @@ export function autoConnect(db, opts = {}) {
       const weight = Math.round(Math.min(shared / unionSize, 1.0) * 100) / 100;
       if (weight < pruneThreshold) continue;
       if (dryRun) { created++; continue; }
-      try { upsert.run(mem.id, targetId, weight); created++; } catch {}
+      try { upsert.run(mem.id, targetId, weight); created++; } catch (e) {
+        if (process.env.DEBUG) console.warn(`[remember] autoConnect upsert failed: ${e.message}`);
+      }
     }
   }
   if (dryRun) {
@@ -186,7 +190,9 @@ export async function enhanceWithLLM(db, memoryId, content) {
         upsert.run(memoryId, mem.id, 0.7);
         enhanced++;
       }
-    } catch {}
+    } catch (e) {
+      if (process.env.DEBUG) console.warn(`[remember] enhanceWithLLM FTS match failed: ${e.message}`);
+    }
   }
   return { enhanced, entities: result.entities, relations: result.relations || [] };
 }

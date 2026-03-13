@@ -44,9 +44,8 @@ export default class Remember {
           newId: randomUUID(),
         });
         if (result?.action === 'superseded') {
-          // Store the new version
+          // Store the new version with a fresh ID, inheriting metadata from the best match
           return this._insert(content, {
-            id: result.oldId ? undefined : undefined,
             category: opts.category || best.category,
             tags: tags.length ? tags : JSON.parse(best.tags || '[]'),
             source,
