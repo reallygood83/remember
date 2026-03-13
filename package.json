@@ -8,8 +8,14 @@
     "remember": "bin/remember-cli.js"
   },
   "scripts": {
-    "test": "node --test test/basic.test.js"
+    "test": "node --test test/basic.test.js",
+    "setup": "node skill/scripts/setup.js"
   },
+  "files": [
+    "src/",
+    "bin/",
+    "skill/"
+  ],
   "keywords": ["memory", "ai", "agent", "fsrs", "cognitive"],
   "license": "MIT",
   "dependencies": {
